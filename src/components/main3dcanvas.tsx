@@ -10,16 +10,24 @@ import {
     MeshBuilder,
     Color3,
     Vector2,
+    StandardMaterial
 } from '@babylonjs/core';
 
 interface BabylonCanvasProps {
     onSceneReady?: (scene: Scene) => void; // callback gửi scene lên cha
+    backGroundColor: string;
 }
 
-export default function BabylonCanvas({ onSceneReady }: BabylonCanvasProps) {
+export default function BabylonCanvas({ onSceneReady, backGroundColor }: BabylonCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const engineRef = useRef<Engine | null>(null);
     const sceneRef = useRef<Scene | null>(null);
+   
+    useEffect(() => {
+        if (sceneRef.current) {
+            sceneRef.current.clearColor = Color3.FromHexString(backGroundColor).toColor4();
+        }
+    }, [backGroundColor]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -33,12 +41,6 @@ export default function BabylonCanvas({ onSceneReady }: BabylonCanvasProps) {
 
         scene.clearColor = Color3.FromHexString('#49475B').toColor4();
 
-        const ground = MeshBuilder.CreateGround(
-            'ground',
-            { width: 3, height: 3 },
-            scene,
-        );
-
         const camera = new ArcRotateCamera(
             'cam',
             Math.PI / 4,
@@ -47,16 +49,17 @@ export default function BabylonCanvas({ onSceneReady }: BabylonCanvasProps) {
             new Vector3(0, 0, 0),
             scene,
         );
-        camera.lowerRadiusLimit = 1.5;
+        camera.minZ = 0.01;
+        camera.lowerRadiusLimit = .2;
         camera.upperRadiusLimit = 2.7;
 
         camera.angularSensibilityX = 7000;
         camera.angularSensibilityY = 7000;
 
-        camera.wheelPrecision = 300;
+        camera.wheelPrecision = 100;
         camera.panningSensibility = 0;
 
-        camera.targetScreenOffset.addInPlace(new Vector2(0, -0.85));
+        camera.targetScreenOffset.addInPlace(new Vector2(0, -0.5));
         camera.attachControl(canvas, true);
 
         const light = new HemisphericLight(

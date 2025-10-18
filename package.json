@@ -3,9 +3,9 @@
     "version": "0.1.0",
     "private": true,
     "scripts": {
-        "dev": "clear && next dev --turbopack",
-        "build": "clear && next build --turbopack",
-        "start": "clear && next start",
+        "dev": "cls && next dev --turbopack",
+        "build": "cls && next build --turbopack",
+        "start": "cls && next start",
         "lint": "eslint"
     },
     "dependencies": {
