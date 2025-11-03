@@ -1,18 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
 import dynamic from 'next/dynamic';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { debounce } from 'lodash';
-
-import { Scene } from '@babylonjs/core/scene';
-import {
-    Color3,
-    Mesh,
-    SceneLoader,
-    StandardMaterial,
-    Texture,
-    TransformNode,
-} from '@babylonjs/core';
 
 import {
     ArrowDownFromLine,
@@ -20,13 +11,6 @@ import {
     ImagePlus,
     Trash2,
 } from 'lucide-react';
-
-const BabylonCanvas = dynamic(() => import('@/components/main3dcanvas'), {
-    ssr: false,
-});
-
-// let shirtMat: StandardMaterial | null = null;
-// let shirtTexture: Texture | null = null;
 
 function getMousePos(
     canva: HTMLCanvasElement,
@@ -36,24 +20,16 @@ function getMousePos(
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
-export default function CanvasResize() {
-    const [scene, setScene] = useState<Scene | null>(null);
-    const [backgroundcolor, setbackgroundcolor] = useState<string >('');
-    const [color, setcolor] = useState<string >('');
-
-
-    const patternPath = '/models/aonam1_opacity_1001.png';
-    const modelPath = String('/models/aonam01-2.glb');
-
-
-
+export default function MockupController({
+    patternPath,
+}: {
+    patternPath: string;
+}) {
+    // const patternPath = '/models/aonam1_opacity_1001.png';
+    // const modelPath = String('/models/aonam01-2.glb');
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const hitboxRef = useRef<HTMLDivElement | null>(null);
-
-    // Add missing refs for shirt mesh and group
-    const shirtMeshRef = useRef<any>(null);
-    const shirtGroupRef = useRef<any>(null);
 
     const [objects, setObjects] = useState<ImgObj[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -62,11 +38,6 @@ export default function CanvasResize() {
         x: number;
         y: number;
     } | null>(null);
-
-    const debouncedUpdate = useCallback(
-        debounce(() => updateShirtTexture(), 150),
-        [],
-    );
 
     // --- redraw ---
     useEffect(() => {
@@ -106,7 +77,6 @@ export default function CanvasResize() {
         }
 
         const handle = hitboxRef.current;
-
         const obj = objects.find((o) => o.id === selectedId);
         if (!selectedId || !handle || !obj) {
             handle!.style.opacity = '0';
@@ -117,7 +87,6 @@ export default function CanvasResize() {
         handle.style.position = 'absolute';
         handle.style.top = `${obj.y}px`;
         handle.style.left = `${obj.x + obj.w}px`;
-        debouncedUpdate();
     }, [objects, selectedId]);
 
     function drawHandles(ctx: CanvasRenderingContext2D, obj: ImgObj) {
@@ -283,7 +252,6 @@ export default function CanvasResize() {
     }
 
     function onPointerUp() {
-        updateShirtTexture();
         setActiveHandle(null);
         setDragOffset(null);
     }
@@ -343,69 +311,6 @@ export default function CanvasResize() {
         });
     };
 
-    const loadModel = (url: string) => {
-        if (!scene) return;
-
-        // Xóa áo cũ nếu có
-        if (shirtGroupRef.current) {
-            shirtGroupRef.current
-                .getChildMeshes(false)
-                .forEach((m: { dispose: () => any }) => m.dispose());
-            shirtGroupRef.current.dispose();
-            shirtGroupRef.current = null;
-            shirtMeshRef.current = null;
-        }
-
-        import('@babylonjs/loaders/glTF').then(() => {
-            // Tạo group mới để quản lý áo
-            const group = new TransformNode('shirtGroup', scene);
-            shirtGroupRef.current = group;
-
-            SceneLoader.ImportMesh(
-                '',
-                url.replace(/\/[^/]+$/, '/'),
-                url.split('/').pop()!,
-                scene,
-                (meshes) => {
-                    const validMeshes = meshes.filter(
-                        (m) => m instanceof Mesh && (m as Mesh).geometry,
-                    ) as Mesh[];
-
-                    if (validMeshes.length === 0) return;
-
-                    validMeshes.forEach((m) => (m.parent = group));
-                    shirtMeshRef.current = validMeshes[0];
-                },
-            );
-        });
-    };
-
-    async function updateShirtTexture() {
-        if (!shirtGroupRef.current || !canvasRef.current) return;
-        const scene = shirtGroupRef.current.getScene();
-        const mergeCanvas = await mergeImages(patternPath, canvasRef.current);
-
-        const mat = new StandardMaterial('shirtMat', scene);
-        mat.diffuseColor = new Color3(1, 1, 1);
-        mat.backFaceCulling = true;
-
-        // const dataUrl = canvasRef.current.toDataURL('image/png');
-        const tex = new Texture(
-            mergeCanvas,
-            scene,
-            true,
-            false,
-            Texture.TRILINEAR_SAMPLINGMODE,
-        );
-        tex.hasAlpha = true;
-
-        mat.diffuseTexture = tex;
-        mat.specularColor = new Color3(0, 0, 0);
-        shirtGroupRef.current.getChildMeshes().forEach((m: Mesh) => {
-            m.material = mat;
-        });
-    }
-
     async function mergeImages(
         baseUrl: string,
         overlayCanvas: HTMLCanvasElement,
@@ -445,91 +350,61 @@ export default function CanvasResize() {
     }
 
     return (
-        <div className="w-full h-screen p-4 flex  gap-2 bg-neutral-900 text-white">
-            <div className="w-[40%]">
-                <div className="flex h-15 gap-2 items-center">
-                    <button
-                        className="px-2 py-1 rounded border border-slate-600 bg-slate-800 flex items-center gap-2"
-                        onClick={() => loadModel(modelPath)}
-                    >
-                        Load Model
-                    </button>
-                    <label className="cursor-pointer rounded border border-slate-600 bg-slate-800 p-2">
-                        <ImagePlus size={16} />
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            className="hidden"
-                        />
-                    </label>
-
-                    <button
-                        className="px-2 py-1 rounded border border-slate-600 bg-slate-800 flex items-center gap-2"
-                        onClick={() => {
-                            setObjects([]);
-                            setSelectedId(null);
-                        }}
-                        disabled={!objects.length}
-                    >
-                        CLEAR
-                    </button>
-
-
-                    <label className="relative inline-block">
-                        <input
-                            type="color"
-                            onChange={(e) => setbackgroundcolor(e.target.value)}
-                            className="absolute inset-0 opacity-0 cursor-pointer"
-                        />
-                        <div
-                            className="h-10 w-10 rounded-full border"
-                            style={{ backgroundColor: backgroundcolor }}
-                        />
-                    </label>
-                    <label className="relative inline-block">
-                        <input
-                            type="color"
-                            onChange={(e) => setcolor(e.target.value)}
-                            className="absolute inset-0 opacity-0 cursor-pointer"
-                        />
-                        <div
-                            className="h-10 w-10 rounded-full border"
-                            style={{ backgroundColor: color }}
-                        />
-                    </label>                    
-                </div>
-                <div className="relative">
-                    <canvas
-                        ref={canvasRef}
-                        className="w-full aspect-square touch-none border z-1 rounded !bg-cover "
-                        style={{ background: `url(${patternPath})` }}
-                        onPointerDown={onPointerDown}
-                        onPointerMove={onPointerMove}
-                        onPointerUp={onPointerUp}
+        <>
+            {/* button controller */}
+            <div className="flex h-15 gap-2 items-center">
+                <label className="cursor-pointer rounded border border-slate-600 bg-slate-800 p-2">
+                    <ImagePlus size={16} />
+                    <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
                     />
-                    <div
-                        ref={hitboxRef}
-                        className=" absolute top-0 left-0 handle pl-2 flex flex-col gap-2 rounded opacity-0"
-                    >
-                        <Trash2
-                            className="bg-blue-500 p-1 rounded disabled:opacity-50 "
-                            onClick={handleDeleteSelected}
-                        />
-                        <ArrowUpFromLine
-                            className="bg-blue-500 p-1 rounded disabled:opacity-50 "
-                            onClick={handleUpSelected}
-                        />
-                        <ArrowDownFromLine
-                            className="bg-blue-500 p-1 rounded disabled:opacity-50 "
-                            onClick={handleDownSelected}
-                        />
-                    </div>
+                </label>
+
+                <button
+                    className="px-2 py-1 rounded border border-slate-600 bg-slate-800 flex items-center gap-2"
+                    onClick={() => {
+                        setObjects([]);
+                        setSelectedId(null);
+                    }}
+                    disabled={!objects.length}
+                >
+                    CLEAR
+                </button>
+            </div>
+
+            {/* canvas monitor */}
+            <div className="relative">
+                <canvas
+                    ref={canvasRef}
+                    className="w-full aspect-square touch-none border z-1 rounded !bg-cover "
+                    style={{ background: `url(${patternPath})` }}
+                    onPointerDown={onPointerDown}
+                    onPointerMove={onPointerMove}
+                    onPointerUp={onPointerUp}
+                />
+
+                {/* hitbox */}
+                <div
+                    ref={hitboxRef}
+                    className=" absolute top-0 left-0 handle pl-2 flex flex-col gap-2 rounded opacity-0"
+                >
+                    <Trash2
+                        className="bg-blue-500 p-1 rounded disabled:opacity-50 "
+                        onClick={handleDeleteSelected}
+                    />
+                    <ArrowUpFromLine
+                        className="bg-blue-500 p-1 rounded disabled:opacity-50 "
+                        onClick={handleUpSelected}
+                    />
+                    <ArrowDownFromLine
+                        className="bg-blue-500 p-1 rounded disabled:opacity-50 "
+                        onClick={handleDownSelected}
+                    />
                 </div>
             </div>
-            <div className="w-[60%] rounded overflow-hidden">
-                <BabylonCanvas backGroundColor={backgroundcolor} onSceneReady={setScene} />
-            </div>
-        </div>
+        </>
     );
 }

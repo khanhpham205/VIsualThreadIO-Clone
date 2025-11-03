@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import dynamic from 'next/dynamic';
@@ -8,7 +10,6 @@ import { Scene } from '@babylonjs/core/scene';
 import {
     Color3,
     Mesh,
-    PBRMaterial,
     SceneLoader,
     StandardMaterial,
     Texture,
@@ -43,8 +44,11 @@ export default function CanvasResize() {
     const [color, setcolor] = useState<string >('');
 
 
-    const patternPath = String('/models/a/c.png');
-    const modelPath   = String('/models/a/c.glb');
+    const patternPath = '/models/aonam1_opacity_1001.png';
+    const modelPath = String('/models/aonam01-2.glb');
+
+
+
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const hitboxRef = useRef<HTMLDivElement | null>(null);
@@ -117,10 +121,6 @@ export default function CanvasResize() {
         handle.style.left = `${obj.x + obj.w}px`;
         debouncedUpdate();
     }, [objects, selectedId]);
-
-    useEffect(() => {
-        updateShirtTexture();
-    }, [color]);
 
     function drawHandles(ctx: CanvasRenderingContext2D, obj: ImgObj) {
         const size = 8;
@@ -383,42 +383,30 @@ export default function CanvasResize() {
     };
 
     async function updateShirtTexture() {
-    if (!shirtGroupRef.current || !canvasRef.current) return;
-    const scene = shirtGroupRef.current.getScene();
-    const mergedUrl = await mergeImages(patternPath, canvasRef.current);
+        if (!shirtGroupRef.current || !canvasRef.current) return;
+        const scene = shirtGroupRef.current.getScene();
+        const mergeCanvas = await mergeImages(patternPath, canvasRef.current);
 
-    // tạo material kiểu PBR (giữ ánh sáng, vân vải, độ nhám)
-    const mat = new PBRMaterial("shirtMat", scene);
-    mat.backFaceCulling = true;
+        const mat = new StandardMaterial('shirtMat', scene);
+        mat.diffuseColor = new Color3(1, 1, 1);
+        mat.backFaceCulling = true;
 
-    // map chính (vải + mockup)
-    const baseTex = new Texture(
-        mergedUrl,
-        scene,
-        true,
-        false,
-        Texture.TRILINEAR_SAMPLINGMODE
-    );
-    baseTex.hasAlpha = true;
+        // const dataUrl = canvasRef.current.toDataURL('image/png');
+        const tex = new Texture(
+            mergeCanvas,
+            scene,
+            true,
+            false,
+            Texture.TRILINEAR_SAMPLINGMODE,
+        );
+        tex.hasAlpha = true;
 
-    mat.albedoTexture = baseTex;
-    mat.useAlphaFromAlbedoTexture = true;
-
-    // đổi màu áo theo RGB (vẫn giữ vân vải)
-    const col = Color3.FromHexString(color || "#ffffff");
-    mat.albedoColor = col;
-
-    // ánh sáng tự nhiên, hơi nhám để giữ độ sần vải
-    mat.metallic = 0.0;
-    mat.roughness = 0.65;
-
-    // nếu có normal map vải thật thì gắn thêm
-    // mat.bumpTexture = new Texture("/models/fabric_normal.jpg", scene);
-
-    shirtGroupRef.current.getChildMeshes().forEach((m: Mesh) => {
-        m.material = mat;
-    });
-}
+        mat.diffuseTexture = tex;
+        mat.specularColor = new Color3(0, 0, 0);
+        shirtGroupRef.current.getChildMeshes().forEach((m: Mesh) => {
+            m.material = mat;
+        });
+    }
 
     async function mergeImages(
         baseUrl: string,
